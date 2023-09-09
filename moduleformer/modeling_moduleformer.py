@@ -52,7 +52,8 @@ def stickbreaking_att(
     """
     logits = torch.einsum('bikhd,bjhd->bkhij', q, k) / math.sqrt(k.size(-1))
     mask = (mask[None, None, None, :, :] == 0).expand_as(logits)
-    z = F.sigmoid(logits + att_mask if att_mask is not None else logits).masked_fill(mask, 0)
+    logits = logits + att_mask if att_mask is not None else logits
+    z = F.sigmoid(logits).masked_fill(mask, 0)
     log_beta = F.logsigmoid(-logits).masked_fill(mask, 0)
     re_cum_log_beta = torch.einsum('bnhij,jk->bnhik', log_beta, cum_weight)
     att = z * re_cum_log_beta.exp()
