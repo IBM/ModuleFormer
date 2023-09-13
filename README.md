@@ -29,10 +29,10 @@ model = AutoModelForCausalLM.from_pretrained('ibm/MoLM-350M-4B')
 ```
 
 **Model Details**
-MoLM-350M-4B is a MoE-based language models. It has 4 billion parameters, but each input token only use 350M parameteres during its inference. Thus, it's computationally equivelant to a 350M dense model.
-MoLM-700M-4B has 4 billion parameters and computationally equivelant to a 700M dense model.
-MoLM-700M-8B has 8 billion parameters and computationally equivelant to a 700M dense model.
-Both models are trained on 300 billion tokens from publicly available sources, with a learning rate of 3.0 x 10<sup>-4</sup> and a global batch-size of 3M tokens.
+MoLM-350M-4B is a MoE-based language model. It has 4 billion parameters, but each input token only activates 350M parameters. Thus, it's computationally equivalent to a 350M dense model. 
+MoLM-700M-4B has 4 billion parameters and is computationally equivalent to a 700M dense model. 
+MoLM-700M-8B has 8 billion parameters and is computationally equivalent to a 700M dense model. All models are trained on 300 billion tokens from publicly available sources.
+All models are trained on 300 billion tokens from publicly available sources, with a learning rate of 3.0 x 10<sup>-4</sup> and a global batch-size of 3M tokens.
 
 **Model Developers** IBM
 
