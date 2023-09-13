@@ -144,8 +144,8 @@ class ModuleFormerAttention(nn.Module):
         k = k.view(B, context_length, self.n_head, self.head_size) # (B, T, nh, hs)
         v = v.view(B, context_length, self.n_head, self.head_size) # (B, T, nh, hs)
 
-        mask = self.mask[context_length - T:context_length, :context_length]
-        cum_weight=self.cum_weight[:context_length, :context_length]
+        mask = torch.tril(torch.ones(context_length, context_length, dtype=torch.int8, device=q.device))[context_length - T:, :]
+        cum_weight=torch.tril(torch.ones(context_length, context_length, device=q.device), -1).type_as(q)
 
         y, attn_weights = stickbreaking_att(q, k, v, mask=mask, cum_weight=cum_weight, att_mask=attention_mask)
 
