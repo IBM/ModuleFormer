@@ -29,30 +29,31 @@ model = AutoModelForCausalLM.from_pretrained('ibm/MoLM-350M-4B')
 ```
 
 **Model Details**
-MoLM-350M-4B is a MoE-based language models. It has 4 billion parameters, but each input token will only use 350M parameteres during its inference. Thus, it's computationally equivelant to a 350M dense model. 
+MoLM-350M-4B is a MoE-based language models. It has 4 billion parameters, but each input token only use 350M parameteres during its inference. Thus, it's computationally equivelant to a 350M dense model.
+MoLM-700M-4B has 4 billion parameters and computationally equivelant to a 700M dense model.
 MoLM-700M-8B has 8 billion parameters and computationally equivelant to a 700M dense model.
 Both models are trained on 300 billion tokens from publicly available sources, with a learning rate of 3.0 x 10<sup>-4</sup> and a global batch-size of 3M tokens.
 
 **Model Developers** IBM
 
-**Variations** MoLM comes in two different parameter sizes — 4B and 8B.
+**Variations** MoLM comes in two different parameter sizes — 4B and 8B. The 4B models has two variants with different computation cost — 350M and 700M.
 
 **Input** Models input text only.
 
 **Output** Models generate text only.
 
-**Model Architecture** MoLM is an auto-regressive language model that uses the ModuleFormer architecture. It has 16 attention modules in each attention layer and 32 MLP modules in each MLP layer. During inference, the model activate 2 modules in each layer for each token condition on the inputs. MoLM-350M-4B has 24 blocks and MoLM-700M-8B has 48 blocks.
+**Model Architecture** MoLM is an auto-regressive language model that uses the ModuleFormer architecture. It has 16 attention modules in each attention layer and 32 MLP modules in each MLP layer. During inference, in each layer, MoLM-350M-4B and MoLM-700M-8B activate 2 modules for each token, while MoLM-700M-4B activate 4 modules. MoLM-350M-4B and MoLM-700M-4B has 24 blocks and MoLM-700M-8B has 48 blocks.
 
 **Status** This is a static model trained on an offline dataset. Future versions of the tuned models will be released as we improve model safety with community feedback.
 
 **Research Paper** ["ModuleFormer: Modularity Emerges from Mixture-of-Experts"](https://arxiv.org/abs/2306.04640)
 
 ## Training Data
-MoLM was pretrained on 300 billion tokens of data from publicly available sources.
+MoLM models are pretrained on 300 billion tokens of data from publicly available sources.
 
 ## Evaluation Results
 
-In this section, we report the results for the MoLM-350M-4B and MoLM-700M-8B models on standard academic benchmarks.For all the evaluations, we use our internal evaluations library.
+In this section, we report the results for the MoLM models on standard academic benchmarks. For all the evaluations, we use [LM evaluations Harness](https://github.com/EleutherAI/lm-evaluation-harness).
 
 |Model|Latency|Memory|Throughput|Hellaswag|PIQA|ARC-e|ARC-c|OBQA|
 |---|---|---|---|---|---|---|---|---|
@@ -63,6 +64,7 @@ In this section, we report the results for the MoLM-350M-4B and MoLM-700M-8B mod
 |MoLM-350M-4B|497|27|71017|39.21|70.13|56.44|23.55|20.8|
 |GPT-Neo 2.7B|1737|35|18788|42.71|72.2|61.07|27.47|23.2|
 |Pythia 2.8B|2111|70|15522|45.34|73.99|64.35|29.35|23.8|
+|MoLM-700M-4B|863|27|39931|42.20|73.01|60.82|25.94|22.6|
 |MoLM-700M-8B|939|38|37419|43.33|72.91|62.46|27.90|23.8|
 
 |Model| |TriviaQA| | | HumanEval| |Wikitext|
@@ -73,7 +75,8 @@ In this section, we report the results for the MoLM-350M-4B and MoLM-700M-8B mod
 |Pythia 1.4B |5.30 |9.87 |12.84 |2.19 |7.31 |14.33 |14.71|
 |MoLM-350M-4B |5.40 |11.12 |13.70 |3.04 |6.99 |13.79 |15.15 |
 |GPT-Neo 2.7B |4.82 |11.23 |13.67 |4.89 |9.54 |17.90 |13.93 |
-|Pythia 2.8B |7.38 |15.58 |18.98 |4.91 |11.76 |21.54 |12.68| 
+|Pythia 2.8B |7.38 |15.58 |18.98 |4.91 |11.76 |21.54 |12.68|
+|MoLM-700M-4B|9.07|14.24|16.49|5.50|10.65|20.27|13.20|
 |MoLM-700M-8B |11.47 |16.73 |20.75 |5.51 |12.58 |20.40 |12.97 |
 
 ## Ethical Considerations and Limitations
@@ -83,4 +86,5 @@ MoLM is a new technology that carries risks with use. Testing conducted to date 
 |Model|MoLM|
 |---|---|
 |350M-4B| [Link](https://huggingface.co/ibm/MoLM-350M-4B) |
+|700M-4B| [Link](https://huggingface.co/ibm/MoLM-700M-4B) |
 |700M-8B| [Link](https://huggingface.co/ibm/MoLM-700M-8B) |
