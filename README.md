@@ -1,12 +1,12 @@
 # **ModuleFormer**
 
-**ModuleFormer** is a modular architecture that includes two different types of modules, new stick-breaking attention heads, and feedforward experts.
-Different modules are sparsely activated conditions on the input token during training and inference.
-In our experiment, we found that the modular architecture enables three important abilities for large pre-trained language models:
+**ModuleFormer** is a MoE-based architecture that includes two different types of experts: stick-breaking attention heads and feedforward experts.
+Different experts are sparsely activated conditions on the input token during training and inference.
+In our experiment, we found that the sparse architecture enables three important abilities for large pre-trained language models:
 
-1) Efficiency, since ModuleFormer only activates a subset of its modules for each input token, thus it could achieve the same performance as dense LLMs with more than two times throughput;
-2) Extendability, ModuleFormer is more immune to catastrophic forgetting than dense LLMs and can be easily extended with new modules to learn new knowledge that is not included in the training data;
-3) Specialisation, finetuning ModuleFormer could specialize a subset of modules to the finetuning task, and the task-unrelated modules could be easily pruned for a lightweight deployment.
+1) Efficiency, since ModuleFormer only activates a subset of its experts for each input token, thus it could achieve the same performance as dense LLMs with more than two times throughput;
+2) Extendability, ModuleFormer is more immune to catastrophic forgetting than dense LLMs and can be easily extended with new experts to learn new knowledge that is not included in the training data;
+3) Specialisation, finetuning ModuleFormer could specialize a subset of experts to the finetuning task, and the task-unrelated experts could be easily pruned for a lightweight deployment.
 
 **MoLM** is a collection of ModuleFormer-based language models ranging in scale from 4 billion to 8 billion parameters.
 
