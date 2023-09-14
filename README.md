@@ -82,7 +82,7 @@ In this section, we report the results for the MoLM models on standard academic 
 ## Ethical Considerations and Limitations
 MoLM is a new technology that carries risks with use. Testing conducted to date has been in English, and has not covered, nor could it cover all scenarios. For these reasons, as with all LLMs, MoLM’s potential outputs cannot be predicted in advance, and the model may in some instances produce inaccurate, biased or other objectionable responses to user prompts. Therefore, before deploying any applications of MoLM, developers should perform safety testing and tuning tailored to their specific applications of the model.
 
-### Citation
+## Citation
 
 Please cite the following paper if you use the data or code in this repo.
 
