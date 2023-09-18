@@ -197,6 +197,7 @@ class MoE(nn.Module):
         Returns:
             Tensor: Reduced output tensor.
         """
+        
         bsz, length, k, emb_size = x.size()
         x = x.reshape(-1, emb_size)
 
