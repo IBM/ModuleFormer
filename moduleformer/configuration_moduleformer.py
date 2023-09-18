@@ -155,6 +155,15 @@ class ModuleFormerOnnxConfig(OnnxConfigWithPast):
         patching_specs: List[PatchingSpec] = None,
         use_past: bool = False,
     ):
+        """
+        Initialize the ModuleFormerOnnxConfig.
+
+        Args:
+            config (PretrainedConfig): Pretrained model configuration.
+            task (str): Task description.
+            patching_specs (List[PatchingSpec]): List of patching specifications.
+            use_past (bool): Whether to use past tokens in the configuration.
+        """
         super().__init__(config, task=task, patching_specs=patching_specs, use_past=use_past)
         if not getattr(self._config, "pad_token_id", None):
             # TODO: how to do that better?
@@ -162,6 +171,12 @@ class ModuleFormerOnnxConfig(OnnxConfigWithPast):
 
     @property
     def inputs(self) -> Mapping[str, Mapping[int, str]]:
+        """
+        Define the input mappings.
+
+        Returns:
+            Mapping[str, Mapping[int, str]]: Input mappings.
+        """
         common_inputs = OrderedDict({"input_ids": {0: "batch", 1: "sequence"}})
         if self.use_past:
             self.fill_with_past_key_values_(common_inputs, direction="inputs")
@@ -173,10 +188,22 @@ class ModuleFormerOnnxConfig(OnnxConfigWithPast):
 
     @property
     def num_layers(self) -> int:
+        """
+        Get the number of layers.
+
+        Returns:
+            int: Number of layers.
+        """
         return self._config.n_layer
 
     @property
     def num_attention_heads(self) -> int:
+        """
+        Get the number of attention heads.
+
+        Returns:
+            int: Number of attention heads.
+        """
         return self._config.n_head
 
     def generate_dummy_inputs(
@@ -187,6 +214,19 @@ class ModuleFormerOnnxConfig(OnnxConfigWithPast):
         is_pair: bool = False,
         framework: Optional[TensorType] = None,
     ) -> Mapping[str, Any]:
+        """
+        Generate dummy inputs for testing.
+
+        Args:
+            tokenizer (PreTrainedTokenizer): Pretrained tokenizer.
+            batch_size (int): Batch size.
+            seq_length (int): Sequence length.
+            is_pair (bool): Whether the input is a pair.
+            framework (Optional[TensorType]): Tensor framework.
+
+        Returns:
+            Mapping[str, Any]: Dummy inputs.
+        """
         common_inputs = super(OnnxConfigWithPast, self).generate_dummy_inputs(
             tokenizer, batch_size=batch_size, seq_length=seq_length, is_pair=is_pair, framework=framework
         )
@@ -225,4 +265,10 @@ class ModuleFormerOnnxConfig(OnnxConfigWithPast):
 
     @property
     def default_onnx_opset(self) -> int:
+        """
+        Get the default ONNX opset version.
+
+        Returns:
+            int: Default ONNX opset version.
+        """
         return 13
