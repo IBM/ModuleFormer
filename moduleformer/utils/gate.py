@@ -5,6 +5,16 @@ from typing import Any, Dict, List, Optional
 
 # @torch.jit.script
 def log_gmm_posterior(z, expert_centroids):
+     """
+    Compute the log posterior probabilities of data points z belonging to Gaussian mixture components defined by centroids.
+
+    Args:
+        z (torch.Tensor): Data points (batch_size x feature_dim).
+        expert_centroids (torch.Tensor): Centroids of Gaussian mixture components (num_experts x feature_dim).
+
+    Returns:
+        torch.Tensor: Log posterior probabilities for each data point (batch_size x num_experts).
+    """
      return (
         torch.matmul(z, expert_centroids.t())
         # - 0.5 * (
@@ -16,6 +26,21 @@ def log_gmm_posterior(z, expert_centroids):
 
 @torch.jit.script
 def compute_gating(k: int, probs: torch.Tensor, top_k_gates: torch.Tensor, top_k_indices: torch.Tensor):
+    """
+    Compute gating values for the mixture of experts based on probabilities and top-k indices.
+
+    Args:
+        k (int): Number of experts to select.
+        probs (torch.Tensor): Probability values for each expert (batch_size x num_experts).
+        top_k_gates (torch.Tensor): Gating values for top-k experts (batch_size x k).
+        top_k_indices (torch.Tensor): Indices of top-k experts (batch_size x k).
+
+    Returns:
+        torch.Tensor: Batch-level gating values.
+        torch.Tensor: Batch-level expert indices.
+        torch.Tensor: Expert size for each expert.
+        torch.Tensor: Sorted indices of top-k experts.
+    """
     zeros = torch.zeros_like(probs)
     gates = zeros.scatter(1, top_k_indices, 1)
     expert_size = gates.long().sum(0)
@@ -40,6 +65,20 @@ class top_k_gating(nn.Module):
         aux_loss='mi',
         gate_type='mlp',
     ):
+        """
+        Initialize the top-k gating mechanism.
+
+        Args:
+            input_size (int): Size of the input.
+            num_experts (int): Number of experts.
+            top_k (int): Number of top experts to select.
+            acc_aux_loss (bool): Whether to accumulate auxiliary loss statistics.
+            dropout (float): Dropout rate for gating network.
+            hidden_size (int): Hidden size of the gating network.
+            sample_topk (int): Number of top-k experts to sample during training.
+            aux_loss (str): Type of auxiliary loss ('mi' or 'switch').
+            gate_type (str): Type of gating mechanism ('mlp', 'linear', or 'gmm').
+        """
         super().__init__()
 
         self.num_experts = num_experts
@@ -75,10 +114,16 @@ class top_k_gating(nn.Module):
             raise NotImplementedError
 
     def extra_repr(self):
+        """
+        Return extra representation string for the module.
+        """
         return 'k={}, num_experts={}, aux_loss={}'.format(
             self.top_k, self.num_experts, self.aux_loss)
 
     def init_aux_statistics(self):
+        """
+        Initialize auxiliary statistics based on the chosen auxiliary loss type.
+        """
         if self.aux_loss == 'mi':
             self.p_e = 0.
             self.neg_H_e_given_x = 0.
@@ -90,6 +135,16 @@ class top_k_gating(nn.Module):
             self.acc_count = 0
 
     def update_aux_statistics(self, probs, logits, gates, skip_mask=None):
+        """
+        Update auxiliary statistics based on the current batch.
+
+        Args:
+            probs (torch.Tensor): Probability values for each expert.
+            logits (torch.Tensor): Logits values for each expert.
+            gates (torch.Tensor): Gating values for each expert.
+            skip_mask (torch.Tensor): Skip mask tensor.
+
+        """
         if self.aux_loss == 'mi':
             log_prob = torch.log_softmax(logits, dim=-1)
             self.p_e = self.p_e + probs.mean(0)
@@ -103,6 +158,15 @@ class top_k_gating(nn.Module):
             self.acc_lsesq = self.acc_lsesq + lsesq.sum()
 
     def get_aux_loss_and_clear(self, eps=1e-8):
+        """
+        Calculate and return the auxiliary loss based on the accumulated statistics.
+
+        Args:
+            eps (float): Small epsilon value for numerical stability.
+
+        Returns:
+            torch.Tensor: The calculated auxiliary loss.
+        """
         if self.aux_loss == 'mi':
             denominator = self.count_layers 
             p_e = self.p_e / denominator
@@ -122,16 +186,26 @@ class top_k_gating(nn.Module):
         return loss
 
     def forward(self, x, skip_mask=None):
-        """Noisy top-k gating.
-          See paper: https://arxiv.org/abs/1701.06538.
-          Args:
+        """
+        Compute the top-k gating for the input.
+
+        See paper: https://arxiv.org/abs/1701.06538.
+
+        Args:
+            x (torch.Tensor): Input tensor with shape [batch_size, input_size].
+            skip_mask (torch.Tensor): Skip mask tensor (binary) with the same shape as `x`.
             x: input Tensor with shape [batch_size, input_size]
             train: a boolean - we only add noise at training time.
             noise_epsilon: a float
-          Returns:
+
+        Returns:
+            torch.Tensor: Top-k indices.
+            torch.Tensor: Top-k gating values.
+            torch.Tensor: Probability values for each expert.
             gates: a Tensor with shape [batch_size, num_experts]
             load: a Tensor with shape [num_experts]
         """
+
         if self.gate_type in ['linear', 'mlp']:
             logits = self.w_gate(x)
         elif self.gate_type == 'gmm':

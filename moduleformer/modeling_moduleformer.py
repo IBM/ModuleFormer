@@ -35,6 +35,15 @@ _CONFIG_FOR_DOC = "ModuleFormerConfig"
 
 @torch.jit.script
 def NewGELU(x):
+    """
+    Compute the NewGELU activation function.
+
+    Args:
+        x (torch.Tensor): Input tensor.
+
+    Returns:
+        torch.Tensor: Output tensor after applying NewGELU activation.
+    """
     return 0.5 * x * (1.0 + torch.tanh(math.sqrt(2.0 / math.pi) * (x + 0.044715 * torch.pow(x, 3.0))))
 
 
@@ -48,7 +57,18 @@ def stickbreaking_att(
     att_mask: Optional[torch.FloatTensor] = None,
     ) -> Tuple[torch.Tensor, torch.Tensor]:
     """
-    Stick-breaking attention weights.
+    Compute stick-breaking attention weights.
+
+    Args:
+        q (torch.Tensor): Query tensor.
+        k (torch.Tensor): Key tensor.
+        v (torch.Tensor): Value tensor.
+        mask (torch.Tensor): Mask tensor.
+        cum_weight (torch.Tensor): Cumulative weight tensor.
+        att_mask (Optional[torch.FloatTensor]): Attention mask tensor (default: None).
+
+    Returns:
+        Tuple[torch.Tensor, torch.Tensor]: Tuple containing the output tensor and attention weights.
     """
     logits = torch.einsum('bikhd,bjhd->bkhij', q, k) / math.sqrt(k.size(-1))
     mask = (mask[None, None, None, :, :] == 0).expand_as(logits)
@@ -63,6 +83,12 @@ def stickbreaking_att(
 
 class ModuleFormerAttention(nn.Module):
     def __init__(self, config):
+        """
+        Initialize the ModuleFormerAttention module.
+
+        Args:
+            config: Configuration object with model hyperparameters.
+        """
         super().__init__()
         
         self.q_proj = MoE(
@@ -106,6 +132,18 @@ class ModuleFormerAttention(nn.Module):
         self.head_size = config.att_hidden // config.n_head
 
     def add_history(self, k, v, hidden, use_cache=False):
+        """
+        Add history to key and value tensors.
+
+        Args:
+            k (torch.Tensor): Key tensor.
+            v (torch.Tensor): Value tensor.
+            hidden: Hidden state.
+            use_cache (bool): Whether to use cached history.
+
+        Returns:
+            Tuple[torch.Tensor, torch.Tensor, Tuple[torch.Tensor, torch.Tensor]]: Updated key, value, and history.
+        """
         if hidden is None or not use_cache:
             new_k = k
             new_v = v
@@ -130,6 +168,20 @@ class ModuleFormerAttention(nn.Module):
         Tuple[torch.Tensor, Tuple[torch.Tensor]],
         Optional[Tuple[torch.Tensor, Tuple[torch.Tensor], Tuple[torch.Tensor, ...]]],
     ]:
+        """
+        Forward pass of the ModuleFormerAttention module.
+
+        Args:
+            hidden_states (Optional[torch.FloatTensor]): Input hidden states.
+            attention_mask (Optional[torch.FloatTensor]): Attention mask.
+            layer_past (Optional[Tuple[torch.Tensor]]): Past layer state.
+            head_mask (Optional[torch.FloatTensor]): Head mask.
+            use_cache (Optional[bool]): Whether to use cached states.
+            output_attentions (Optional[bool]): Whether to output attention weights.
+
+        Returns:
+            Union[Tuple[torch.Tensor, Tuple[torch.Tensor]], Optional[Tuple[...]]]: Tuple containing outputs.
+        """
         B, T, C = hidden_states.size() # batch size, sequence length, embedding dimensionality (n_embd)
 
         # calculate query, key, values 
@@ -162,6 +214,12 @@ class ModuleFormerAttention(nn.Module):
 
 class ModuleFormerBlock(nn.Module):
     def __init__(self, config):
+        """
+        Initialize the ModuleFormerBlock module.
+
+        Args:
+            config: Configuration object with model hyperparameters.
+        """
         super().__init__()
         self.ln_1 = nn.LayerNorm(config.n_embd)
         self.attn = ModuleFormerAttention(config)
@@ -183,6 +241,12 @@ class ModuleFormerBlock(nn.Module):
         self.resid_dropout = nn.Dropout(config.resid_pdrop)
 
     def get_aux_loss_and_clear(self):
+        """
+        Get auxiliary loss and clear auxiliary loss accumulators in the attention and MLP layers.
+
+        Returns:
+            torch.Tensor: Auxiliary loss.
+        """
         return self.attn.q_proj.get_aux_loss_and_clear() + self.mlpf.get_aux_loss_and_clear()
 
 
@@ -195,6 +259,21 @@ class ModuleFormerBlock(nn.Module):
         use_cache: Optional[bool] = False,
         output_attentions: Optional[bool] = False,
     ) -> Union[Tuple[torch.Tensor], Optional[Tuple[torch.Tensor, Tuple[torch.FloatTensor, ...]]]]:
+        """
+        Forward pass of the ModuleFormerBlock module.
+
+        Args:
+            hidden_states (Optional[torch.FloatTensor]): Input hidden states.
+            layer_past (Optional[Tuple[torch.Tensor]]): Past layer state.
+            attention_mask (Optional[torch.FloatTensor]): Attention mask.
+            head_mask (Optional[torch.FloatTensor]): Head mask.
+            use_cache (Optional[bool]): Whether to use cached states.
+            output_attentions (Optional[bool]): Whether to output attention weights.
+
+        Returns:
+            Union[Tuple[torch.Tensor], Optional[Tuple[torch.Tensor, Tuple[torch.FloatTensor, ...]]]]:
+            Tuple containing outputs or optional attention weights.
+        """
         attn_outputs = self.attn(
             self.ln_1(hidden_states),
             layer_past=layer_past,
@@ -227,6 +306,13 @@ class ModuleFormerPreTrainedModel(PreTrainedModel):
     _no_split_modules = ["ModuleFormerBlock"]
 
     def __init__(self, *inputs, **kwargs):
+        """
+        Initialize the ModuleFormerPreTrainedModel.
+
+        Args:
+            *inputs: Variable length input arguments.
+            **kwargs: Keyword arguments.
+        """
         super().__init__(*inputs, **kwargs)
 
     def _init_weights(self, module):
@@ -246,6 +332,13 @@ class ModuleFormerPreTrainedModel(PreTrainedModel):
             module.weight.data.fill_(1.0)
 
     def _set_gradient_checkpointing(self, module, value=False):
+        """
+        Set gradient checkpointing for the ModuleFormerModel.
+
+        Args:
+            module: The module for which gradient checkpointing is set.
+            value (bool): Whether to enable gradient checkpointing.
+        """
         if isinstance(module, ModuleFormerModel):
             module.gradient_checkpointing = value
 

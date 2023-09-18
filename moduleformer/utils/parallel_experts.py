@@ -8,10 +8,26 @@ from torch import Tensor
 
 
 class ParallelLinear(torch.autograd.Function):
+    """
+    A custom autograd function for Parallel Linear operation.
+    """
 
     @staticmethod
     @custom_fwd
     def forward(ctx, input, expert_size_list, weight, bias=None):
+        """
+        Forward pass of the ParallelLinear operation.
+
+        Args:
+            ctx: Context object.
+            input (Tensor): Input tensor.
+            expert_size_list (List[int]): List of expert sizes.
+            weight (Tensor): Weight tensor.
+            bias (Optional[Tensor]): Bias tensor.
+
+        Returns:
+            Tensor: Output tensor.
+        """
         # expert_size_list: List[int] = expert_size.tolist()
         output = ParallelLinear.forward_scriptable(input, expert_size_list, weight, bias)
         # assert torch.allclose(ParallelLinear._forward_scriptable(input, expert_size, weight, bias),  output)
@@ -23,6 +39,18 @@ class ParallelLinear(torch.autograd.Function):
     @torch.jit.script
     def forward_scriptable(input: Tensor, expert_size_list: List[int],
                            weight: Tensor, bias: Optional[Tensor]):
+        """
+        Scriptable forward pass of the ParallelLinear operation.
+
+        Args:
+            input (Tensor): Input tensor.
+            expert_size_list (List[int]): List of expert sizes.
+            weight (Tensor): Weight tensor.
+            bias (Optional[Tensor]): Bias tensor.
+
+        Returns:
+            Tensor: Output tensor.
+        """
         output_buf: Tensor = torch.empty((input.size(0), weight.size(2)),
                                          device=input.device, dtype=input.dtype)
         num_linears = weight.size(0)
@@ -43,6 +71,16 @@ class ParallelLinear(torch.autograd.Function):
     @staticmethod
     @custom_bwd
     def backward(ctx, grad_out):
+        """
+        Backward pass of the ParallelLinear operation.
+
+        Args:
+            ctx: Context object.
+            grad_out (Tensor): Gradient of the output.
+
+        Returns:
+            Tuple of Tensors: Gradients with respect to input, weight, and bias.
+        """
         input, weight, bias = ctx.saved_tensors
         expert_size_list = ctx.expert_size_list
         return ParallelLinear.backward_scriptable(
@@ -55,6 +93,19 @@ class ParallelLinear(torch.autograd.Function):
     def backward_scriptable(grad_out: Tensor,
                  input: Tensor, expert_size_list: List[int],
                  weight: Tensor, bias: Optional[Tensor]):
+        """
+        Scriptable backward pass of the ParallelLinear operation.
+
+        Args:
+            grad_out (Tensor): Gradient of the output.
+            input (Tensor): Input tensor.
+            expert_size_list (List[int]): List of expert sizes.
+            weight (Tensor): Weight tensor.
+            bias (Optional[Tensor]): Bias tensor.
+
+        Returns:
+            Tuple of Tensors: Gradients with respect to input, weight, and bias.
+        """
         num_linears = weight.size(0)
         input_list = input.t().split(expert_size_list, dim=1)
         grad_list = grad_out.split(expert_size_list, dim=0)
@@ -85,6 +136,15 @@ class ParallelLinear(torch.autograd.Function):
 
 class ParallelExperts(nn.Module):
     def __init__(self, num_experts, input_size, output_size, bias=False) -> None:
+        """
+        Initialize the ParallelExperts module.
+
+        Args:
+            num_experts (int): Number of experts.
+            input_size (int): Size of the input.
+            output_size (int): Size of the output.
+            bias (bool): Whether to include bias terms.
+        """
         super().__init__()
         # self.input_experts = nn.ModuleList(
         #     [nn.Linear(input_size, output_size, bias=bias) for _ in range(num_experts)]
@@ -104,6 +164,9 @@ class ParallelExperts(nn.Module):
             self.num_experts, self.input_size, self.output_size)
 
     def reset_parameters(self) -> None:
+        """
+        Reset the parameters of the model.
+        """
         # std = math.sqrt(2.0 / float(self.weight.size(1) + self.weight.size(2)))
         # a = math.sqrt(3.0) * std
         nn.init.uniform_(self.weight, -1. / self.weight.size(1), 1. / self.weight.size(1))
@@ -113,6 +176,16 @@ class ParallelExperts(nn.Module):
             nn.init.uniform_(self.bias, -bound, bound)
 
     def forward(self, inputs, expert_size):
+        """
+        Forward pass of the ParallelExperts module.
+
+        Args:
+            inputs (Tensor): Input tensor.
+            expert_size: Expert size information.
+
+        Returns:
+            Tensor: Output tensor.
+        """
         results = ParallelLinear.apply(inputs, expert_size, self.weight, self.bias)
         # expert_size_list: List[int] = expert_size.tolist()
         # input_list = inputs.split(expert_size_list, dim=0)
