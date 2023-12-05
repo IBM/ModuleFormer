@@ -315,6 +315,8 @@ class ModuleFormerPreTrainedModel(PreTrainedModel):
         """
         super().__init__(*inputs, **kwargs)
 
+        self.gradient_checkpointing = False
+
     def _init_weights(self, module):
         """Initialize the weights."""
         if isinstance(module, (nn.Linear,)):
@@ -330,6 +332,16 @@ class ModuleFormerPreTrainedModel(PreTrainedModel):
         elif isinstance(module, nn.LayerNorm):
             module.bias.data.zero_()
             module.weight.data.fill_(1.0)
+
+    def gradient_checkpointing_enable(self):
+        for module in self.modules():
+            if hasattr(module, "gradient_checkpointing"):
+                self._set_gradient_checkpointing(module, True)
+
+    def gradient_checkpointing_disable(self):
+        for module in self.modules():
+            if hasattr(module, "gradient_checkpointing"):
+                self._set_gradient_checkpointing(module, False)
 
     def _set_gradient_checkpointing(self, module, value=False):
         """
@@ -418,8 +430,6 @@ class ModuleFormerModel(ModuleFormerPreTrainedModel):
         self.drop = nn.Dropout(config.embd_pdrop)
         self.h = nn.ModuleList([ModuleFormerBlock(config) for _ in range(config.n_layer)])
         self.ln_f = nn.LayerNorm(config.n_embd)
-
-        self.gradient_checkpointing = False
 
         # Initialize weights and apply final processing
         self.post_init()
