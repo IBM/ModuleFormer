@@ -333,17 +333,26 @@ class ModuleFormerPreTrainedModel(PreTrainedModel):
             module.bias.data.zero_()
             module.weight.data.fill_(1.0)
 
-    def gradient_checkpointing_enable(self):
+    def gradient_checkpointing_enable(self, gradient_checkpointing_kwargs={}):
         for module in self.modules():
             if hasattr(module, "gradient_checkpointing"):
-                self._set_gradient_checkpointing(module, True)
+                self._set_gradient_checkpointing(
+                    module, True, gradient_checkpointing_kwargs
+                )
 
     def gradient_checkpointing_disable(self):
         for module in self.modules():
             if hasattr(module, "gradient_checkpointing"):
-                self._set_gradient_checkpointing(module, False)
+                self._set_gradient_checkpointing(
+                    module, False
+                )
 
-    def _set_gradient_checkpointing(self, module, value=False):
+    def _set_gradient_checkpointing(
+        self,
+        module,
+        value=False,
+        gradient_checkpointing_kwargs={"use_reentrant": False},
+    ):
         """
         Set gradient checkpointing for the ModuleFormerModel.
 
@@ -353,6 +362,7 @@ class ModuleFormerPreTrainedModel(PreTrainedModel):
         """
         if isinstance(module, ModuleFormerModel):
             module.gradient_checkpointing = value
+            module.gradient_checkpointing_kwargs = gradient_checkpointing_kwargs
 
 
 SPARSEGPT_START_DOCSTRING = r"""
@@ -554,6 +564,7 @@ class ModuleFormerModel(ModuleFormerPreTrainedModel):
                     None,
                     attention_mask,
                     head_mask[i],
+                    **self.gradient_checkpointing_kwargs,
                 )
             else:
                 outputs = block(
