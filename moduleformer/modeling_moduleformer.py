@@ -9,7 +9,7 @@ from torch import nn
 from torch.nn import CrossEntropyLoss, MSELoss, BCEWithLogitsLoss
 from torch.nn import functional as F
 
-from transformers.activations import ACT2FN
+from transformers.activations import get_activation
 from transformers.modeling_outputs import (
     BaseModelOutputWithPast, 
     CausalLMOutputWithPast,
@@ -31,20 +31,6 @@ _CONFIG_FOR_DOC = "ModuleFormerConfig"
 #     "moduleformer-small",
 #     # See all ModuleFormer models at https://huggingface.co/models?filter=moduleformer
 # ]
-
-
-@torch.jit.script
-def NewGELU(x):
-    """
-    Compute the NewGELU activation function.
-
-    Args:
-        x (torch.Tensor): Input tensor.
-
-    Returns:
-        torch.Tensor: Output tensor after applying NewGELU activation.
-    """
-    return 0.5 * x * (1.0 + torch.tanh(math.sqrt(2.0 / math.pi) * (x + 0.044715 * torch.pow(x, 3.0))))
 
 
 @torch.jit.script
@@ -230,7 +216,7 @@ class ModuleFormerBlock(nn.Module):
                 num_experts=config.n_mlp_experts, 
                 top_k=config.k_mlp, 
                 bias=False, 
-                activation=NewGELU,
+                activation=get_activation(config.activation_function),
                 acc_aux_loss=False,
                 gating_dropout=config.moe_pdrop,
                 sample_topk=config.sample_topk,
@@ -333,17 +319,26 @@ class ModuleFormerPreTrainedModel(PreTrainedModel):
             module.bias.data.zero_()
             module.weight.data.fill_(1.0)
 
-    def gradient_checkpointing_enable(self):
+    def gradient_checkpointing_enable(self, gradient_checkpointing_kwargs={}):
         for module in self.modules():
             if hasattr(module, "gradient_checkpointing"):
-                self._set_gradient_checkpointing(module, True)
+                self._set_gradient_checkpointing(
+                    module, True, gradient_checkpointing_kwargs
+                )
 
     def gradient_checkpointing_disable(self):
         for module in self.modules():
             if hasattr(module, "gradient_checkpointing"):
-                self._set_gradient_checkpointing(module, False)
+                self._set_gradient_checkpointing(
+                    module, False
+                )
 
-    def _set_gradient_checkpointing(self, module, value=False):
+    def _set_gradient_checkpointing(
+        self,
+        module,
+        value=False,
+        gradient_checkpointing_kwargs={"use_reentrant": False},
+    ):
         """
         Set gradient checkpointing for the ModuleFormerModel.
 
@@ -353,6 +348,7 @@ class ModuleFormerPreTrainedModel(PreTrainedModel):
         """
         if isinstance(module, ModuleFormerModel):
             module.gradient_checkpointing = value
+            module.gradient_checkpointing_kwargs = gradient_checkpointing_kwargs
 
 
 SPARSEGPT_START_DOCSTRING = r"""
@@ -554,6 +550,7 @@ class ModuleFormerModel(ModuleFormerPreTrainedModel):
                     None,
                     attention_mask,
                     head_mask[i],
+                    **self.gradient_checkpointing_kwargs,
                 )
             else:
                 outputs = block(
