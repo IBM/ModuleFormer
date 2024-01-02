@@ -9,7 +9,7 @@ from torch import nn
 from torch.nn import CrossEntropyLoss, MSELoss, BCEWithLogitsLoss
 from torch.nn import functional as F
 
-from transformers.activations import ACT2FN
+from transformers.activations import get_activation
 from transformers.modeling_outputs import (
     BaseModelOutputWithPast, 
     CausalLMOutputWithPast,
@@ -31,20 +31,6 @@ _CONFIG_FOR_DOC = "ModuleFormerConfig"
 #     "moduleformer-small",
 #     # See all ModuleFormer models at https://huggingface.co/models?filter=moduleformer
 # ]
-
-
-@torch.jit.script
-def NewGELU(x):
-    """
-    Compute the NewGELU activation function.
-
-    Args:
-        x (torch.Tensor): Input tensor.
-
-    Returns:
-        torch.Tensor: Output tensor after applying NewGELU activation.
-    """
-    return 0.5 * x * (1.0 + torch.tanh(math.sqrt(2.0 / math.pi) * (x + 0.044715 * torch.pow(x, 3.0))))
 
 
 @torch.jit.script
@@ -230,7 +216,7 @@ class ModuleFormerBlock(nn.Module):
                 num_experts=config.n_mlp_experts, 
                 top_k=config.k_mlp, 
                 bias=False, 
-                activation=NewGELU,
+                activation=get_activation(config.activation_function),
                 acc_aux_loss=False,
                 gating_dropout=config.moe_pdrop,
                 sample_topk=config.sample_topk,
